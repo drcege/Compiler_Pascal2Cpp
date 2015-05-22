@@ -1,4 +1,4 @@
 # Compiler_Pascal2Cpp  
-LinuxÆ½Ì¨  
-±àÒë£ºmake  
-ÔËĞĞ£º./my < test/testgcd.txt > out.cpp  
+Linuxå¹³å°  
+ç¼–è¯‘ï¼šmake  
+è¿è¡Œï¼š./my < test/testgcd.txt > out.cpp  
