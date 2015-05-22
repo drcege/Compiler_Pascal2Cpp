@@ -1,0 +1,15 @@
+program test(input, output);
+var x,y: integer;
+z: real;
+1m:array[1..10] of integer;
+function gcd(a: integer; b: integer):integer;
+begin
+	n:bool
+
+    if b = 0 then	gcd := a
+    else	gvd := gcd(z, a mod b)
+end;
+begin
+    read(x, y);
+    write(gtcomdiv(x, y))
+end

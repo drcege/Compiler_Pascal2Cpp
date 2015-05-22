@@ -1,0 +1,48 @@
+program test(input, output);
+var a{全局变量}: array[1..10] of integer;{程序名} 
+k, m : integer;
+function partition(low: integer ; high: integer): integer;
+var i, j, temp: integer;		{快排子程序partition}
+begin
+    i := low - 1;
+j := low;
+    while j < high do begin
+        if a[j] <= a[high] then begin
+	   			 i := i + 1;
+	   			 temp := a[i];
+	    			a[i] := a[j];
+	    			a[j] := temp
+			  end
+        else
+	    				j := j + 0;
+				j := j + 1 
+    end ;
+    i := i + 1;
+    temp := a[i];
+    a[i] := a[high];
+    a[high] := temp;
+    partition := i
+end;
+procedure qs(low: integer; high: integer);{快排程序}
+var pivot: integer;
+begin
+    pivot:=0;
+    if low <= high then begin
+        	pivot := partition(low, high);
+				qs(low, pivot - 1);
+				qs(pivot + 1, high)
+    end
+    else
+				pivot := pivot + 0
+		end;
+begin					{主程序体}
+    a[0]:=6;a[1]:=4;a[2]:=9;a[3]:=10;a[4]:=11;
+	  a[5]:=16;a[6]:=41;a[7]:=13;a[8]:=13;a[9]:=21;
+    qs(0, 9);
+    k := 0;
+    while k <= 9 do begin		{输出排序后的数组元素}
+				m :=a[k];
+        	write(m);
+				k := k + 1
+    end
+end.
