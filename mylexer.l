@@ -1,22 +1,22 @@
 %{
+#include <stdio.h>
 #include <stdlib.h>
-#include <stdlib.h>  
 #include <string.h>
-#include <ctype.h> 
-#include "propertylist.h"  
+#include <ctype.h>
+#include "propertylist.h"
 #include "myparser.tab.h"
 
-void info_copy(char* yytext, int yyleng);
+void info_copy(char * yytext, int yyleng);
 %}
 
   /*正规定义式*/
-delim           [ \t\r\n]
+delim       [ \t\r\n]
 ws              {delim}+
 letter        [A-Za-z]
-digit           [0-9] 
+digit           [0-9]
 digits        [0-9]+
 id              {letter}({letter}|{digit})*
-num       {digit}+\.{digit}+ 
+num         {digit}+\.{digit}+
 errors          {digits}{id}+\,|{digits}{id}{delim}*|\,{digits}{id}+|{digits}{id}
 
 %%
@@ -48,26 +48,26 @@ write     { info_copy(yytext,yyleng); return WRITE;}
 {id}            { info_copy(yytext,yyleng); return ID;}
 {digits}        {strcpy(yylval.digit_attr.ccode,yytext);
          yylval.digit_attr.num=atoi(yytext);
-         yylval.digit_attr.len=yyleng;  return DIGITS;} 
-{num}         { info_copy(yytext,yyleng); return NUM;}   
-{errors}            {printf("词法分析错误\n");}
-{ws}            {}     
+         yylval.digit_attr.len=yyleng;  return DIGITS;}
+{num}         { info_copy(yytext,yyleng); return NUM;}
+{errors}            {fprintf(stderr, "词法分析错误\n");}
+{ws}            {}
 ("="|"<"|">"|"<="|"<>"|">=") { info_copy(yytext,yyleng); return RELOP; }
-("+"|"-")   { info_copy(yytext,yyleng); return ADDOP; }                 
-("*"|"/")   { info_copy(yytext,yyleng); return MULOP; }                                                           
+("+"|"-")   { info_copy(yytext,yyleng); return ADDOP; }
+("*"|"/")   { info_copy(yytext,yyleng); return MULOP; }
 ":="      { info_copy(yytext,yyleng); return ASSIGNOP;}
 (";"|","|"."|":"|"["|"]"|"("|")") { info_copy(yytext,yyleng); return *yytext;}
 "(*"[^/*)]*"*)" {}
 "{"[^}]*"}"   {}
-"//"(.)*    {} 
+"//"(.)*    {}
 %%
 void info_copy(char* yytext, int yyleng )//复制功能，由yytext,yyleng复制给YACC的全局变量yylval
 {
     strcpy(yylval.Symbol.ccode,yytext);//匹配模式的文本存储在yytext这一变量中,由yytext复制给yylval
     yylval.Symbol.len=yyleng;//yyleng给出匹配模式的长度,由yyleng复制给yylval
-    printf("lexer=%s\n", yytext); 
-
+    fprintf(stderr, "lexer=%s\n", yytext);
 }
+
 int yywrap()
 {
   return 1;

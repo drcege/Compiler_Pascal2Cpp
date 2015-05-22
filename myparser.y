@@ -1,29 +1,27 @@
 %{
-    #include<stdio.h>
-    #include<stdlib.h>
-    #include<string.h>
-    #include "propertylist.h"
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include "propertylist.h"
 
-    int check(char * s);
-    Element * find(char * s);
-    
-    FILE* o, * s;
-    int k;
-    char identifier[20], ex[100], *temp[20];
-    int i, j, count, length[20];
-    char a[15];
-    char t;
-    Element *ele;  //符号表指针
-    Element *ele1;
-    SymbalList *temp1;
-    SymbalList table;
-    int ptrStack = 0;
-    SymbalList * s_stack[1024]; //多个符号表组成的栈结构
-   
-    void yyerror(const char *s);
+int k;
+char identifier[20], ex[100], *temp[20];
+int i, j, count, length[20];
+char a[15];
+char t;
+Element *ele;  //符号表指针
+Element *ele1;
+SymbalList *temp1;
+SymbalList table;
+int ptrStack = 0;
+SymbalList *s_stack[1024];  //多个符号表组成的栈结构
+
+int check(char * s);
+Element * find(char * s);
+void yyerror(const char * s);
 %}
 %locations
-		
+
 %union
 {
     //非终结符
@@ -49,14 +47,14 @@
         char *ccode;//规约后代码
         int len;   //长度
     } array_type;
-    
+
     //数字
     struct digit {
         int num;  //值
         char ccode[20]; //规约后代码
         int len;    //长度
     } digit_attr;
-    
+
     //变量列表
     struct id_list {
         int total;  //总数
@@ -65,7 +63,7 @@
         char *ccode;  //规约后代码
         int len;    //长度
     } id_list;
-    
+
     //列表
     struct list {
         int total;  //总数
@@ -73,7 +71,7 @@
         char *ccode;  //规约后代码
         int len;    //长度
     } list;
-    
+
     //表达式
     struct exp {
         int isfunction; //是否为函数
@@ -96,24 +94,24 @@
 
 %%
 program : program_head program_body '.' //规约成program,直接将代码格式化打印出来
-      {
+       {
           $$.ccode = (char *)malloc($1.len + $2.len + 2);      //分配空间，大小为$1.len + $2.len + 1,1为‘\n’
-        $$.len = sprintf($$.ccode,"%s\n%s",$1.ccode,$2.ccode);     //sprintf函数：把格式化的数据写入某个字符串缓冲区，返回值为长度
+          $$.len = sprintf($$.ccode,"%s\n%s",$1.ccode,$2.ccode);     //sprintf函数：把格式化的数据写入某个字符串缓冲区，返回值为长度
                                                                   //此处将$1.ccode,\n,$2.ccode三部分格式化并写入$$.ccode，返回最终字符串长度
-        fprintf(o, "%s", $$.ccode); //输出
+          fprintf(stdout,  "%s", $$.ccode); //输出
        }
        | program_head program_body error //若不完整，缺少'.',则继续规约，并打印错误信息。
-          {
-        $$.ccode = (char *)malloc($1.len + $2.len + 2);
-        $$.len = sprintf($$.ccode,"%s\n%s",$1.ccode,$2.ccode);
-        fprintf(o, "%s", $$.ccode);
-        yyerror("missing '.'at the end of the program."); //错误报告函数
-        yyerrok; //错误恢复宏定义
-        }
-        ;
+       {
+          $$.ccode = (char *)malloc($1.len + $2.len + 2);
+          $$.len = sprintf($$.ccode,"%s\n%s",$1.ccode,$2.ccode);
+          fprintf(stdout,  "%s", $$.ccode);
+          yyerror("missing '.'at the end of the program."); //错误报告函数
+          yyerrok; //错误恢复宏定义
+       }
+       ;
 
 program_head : PROGRAM ID '(' identifier_list ')' ';'   //规约出程序头，将所需头文件之类的翻译出来，并建立主表入栈
-         {
+       {
           ele = (Element*)malloc(sizeof(Element)); //符号表指针分配一个表项
           strcpy(ele->name, $2.ccode);  //写入变量名称
           ele->type = PROGRAM_T; //赋给类型
@@ -124,7 +122,6 @@ program_head : PROGRAM ID '(' identifier_list ')' ';'   //规约出程序头，�
 
             $$.ccode = (char *)malloc(42);
             $$.len = sprintf($$.ccode,"#include <iostream>\nusing namespace std;\n"); //写入c++程序头
-            printf("\n");
          }
        ;
 
@@ -132,7 +129,7 @@ program_body : declarations subprogram_declarations compound_statement  //程序
          {
           $$.ccode = (char *)malloc($1.len + $2.len + $3.len + 80);
           $$.len = sprintf($$.ccode,"%s\n%s\nint main()\n{\n\t%s\n\treturn(0);\n}",$1.ccode,$2.ccode,$3.ccode);  //翻译相应语句main等
-          printf("body ok\n");
+          fprintf(stderr, "body ok\n");
          }
          ;
 
@@ -144,7 +141,7 @@ identifier_list : identifier_list ',' ID  //规约成变量列表，total记录�
                 strcpy($$.id_name[k],$3.ccode);   //增加一个变量，即ID
               $$.ccode = (char *)malloc($1.len + $3.len + 2); //分配内存 +1为‘，’
               $$.len = sprintf($$.ccode,"%s,%s",$1.ccode,$3.ccode); //格式化代码写入$$，包含','
-                printf("ID=%s\n", $3.ccode);
+                fprintf(stderr, "ID=%s\n", $3.ccode);
           }
         | ID
           {
@@ -153,7 +150,7 @@ identifier_list : identifier_list ',' ID  //规约成变量列表，total记录�
 
               $$.ccode = (char *)malloc($1.len + 1);//分配空间
               $$.len = sprintf($$.ccode,"%s",$1.ccode); //格式化代码写入$$
-                printf("ID=%s\n", $1.ccode);
+                fprintf(stderr, "ID=%s\n", $1.ccode);
             }
 //           | DIGITS ID error ' '//若标示符声明有误
 //           {
@@ -353,9 +350,9 @@ subprogram_head : FUNCTION ID arguments ':' standard_type ';'//规约成子函�
             {
               ele->arr_fun.fun.para_type[k]=$3.para_type[k];
             }
-            
+
             SymPush(s_stack[ptrStack-2], ele);//将表项放入对应子表
-            
+
               $$.ccode = (char *)malloc($2.len + $3.len + $5.len + 2);
                 $$.len = sprintf($$.ccode,"%s %s%s",$5.ccode,$2.ccode,$3.ccode);
             }
@@ -468,7 +465,7 @@ parameter_list : parameter_list ';' identifier_list ':' type  //形成参数列�
               {
                 ele=(Element*)malloc(sizeof(Element));
                 strcpy(ele->name,$1.id_name[k]);
-               
+
                 if($3.isarray==0)
                 {
                   ele->type=$3.Type;
@@ -632,10 +629,10 @@ statement : variable ASSIGNOP expression  //赋值语句
         {
         int tt=$3.len;
         char n[20];
-         
+
            count=0;
            j=0;
-         
+
           strcpy(n,$3.ccode);
            while(count<$3.len)
            {
@@ -1060,7 +1057,7 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
        {
           $$.Type=REAL_T;
           $$.ccode = (char *)malloc($1.len + 1);
-        $$.len = sprintf($$.ccode,"%s",$1.ccode);
+          $$.len = sprintf($$.ccode,"%s",$1.ccode);
      }
      | DIGITS
        {
@@ -1094,41 +1091,16 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
         $$.len = sprintf($$.ccode,"0");
      }
      ;
-
 %%
-
 
 int main(void)
 {
 
     table.m_size = 1024;
     table.m_num_of_pro =0;
-    /*
-    char filename1[20], filename2[20];
-    printf("pascal:\n");
-    scanf("%s", filename1);
-    s = fopen(filename1, "r");
 
-    if (s == NULL)
-    {
-        printf("打开输入文件失败\n");
-        return 0;
-    }
-    
-    printf("C:\n");
-    scanf("%s", filename2);
-    */
-    
-    o = fopen("output.c", "w");
-    if (o == NULL)
-    {
-        printf("打开输出文件失败\n");
-        return 0;
-    }
-         yyparse();
+    yyparse();
 
-//    fclose(s);
-    fclose(o);
     return 0;
 }
 
@@ -1150,7 +1122,6 @@ int check(char *s)
     free(e);
     return 0;
 }
-
 
 //查找操作，从当前子表开始查找，作用域不断往外层扩张，直到查到主程序部分，都不存在，可确定未定义
 Element *find(char *s)
