@@ -8,7 +8,7 @@
 
 void info_copy(char * yytext, int yyleng);
 %}
-
+%option yylineno
   /*正规定义式*/
 delim       [ \t\r\n]
 ws              {delim}+
@@ -45,7 +45,7 @@ true      { info_copy(yytext,yyleng); return TRUE;}
 var       { info_copy(yytext,yyleng); return VAR;}
 while     { info_copy(yytext,yyleng); return WHILE;}
 write     { info_copy(yytext,yyleng); return WRITE;}
-{id}            { info_copy(yytext,yyleng); return ID;}
+{id}            { info_copy(yytext,yyleng);  strcat(yylval.Symbol.ccode, "_"); ++(yylval.Symbol.len);  return ID;}
 {digits}        {strcpy(yylval.digit_attr.ccode,yytext);
          yylval.digit_attr.num=atoi(yytext);
          yylval.digit_attr.len=yyleng;  return DIGITS;}
@@ -64,8 +64,9 @@ write     { info_copy(yytext,yyleng); return WRITE;}
 void info_copy(char* yytext, int yyleng )//复制功能，由yytext,yyleng复制给YACC的全局变量yylval
 {
     strcpy(yylval.Symbol.ccode,yytext);//匹配模式的文本存储在yytext这一变量中,由yytext复制给yylval
+
     yylval.Symbol.len=yyleng;//yyleng给出匹配模式的长度,由yyleng复制给yylval
-    fprintf(stderr, "lexer=%s\n", yytext);
+    //fprintf(stderr, "lexer=%s\n", yytext);
 }
 
 int yywrap()

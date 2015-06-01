@@ -3,7 +3,10 @@
 #include<stdlib.h>
 #include<string.h>
 #include "propertylist.h"
+#define YYERROR_VERBOSE
 
+extern int yylineno;
+    
 int k;
 char identifier[20], ex[100], *temp[20];
 int i, j, count, length[20];
@@ -18,7 +21,7 @@ SymbalList *s_stack[1024];  //多个符号表组成的栈结构
 
 int check(char * s);
 Element * find(char * s);
-void yyerror(const char * s);
+void yyerror(const char *s);
 %}
 %locations
 
@@ -105,7 +108,7 @@ program : program_head program_body '.' //规约成program,直接将代码格式
           $$.ccode = (char *)malloc($1.len + $2.len + 2);
           $$.len = sprintf($$.ccode,"%s\n%s",$1.ccode,$2.ccode);
           fprintf(stdout,  "%s", $$.ccode);
-          yyerror("missing '.'at the end of the program."); //错误报告函数
+          yyerror("程序末尾缺少 '.'"); //错误报告函数
           yyerrok; //错误恢复宏定义
        }
        ;
@@ -129,7 +132,7 @@ program_body : declarations subprogram_declarations compound_statement  //程序
          {
           $$.ccode = (char *)malloc($1.len + $2.len + $3.len + 80);
           $$.len = sprintf($$.ccode,"%s\n%s\nint main()\n{\n\t%s\n\treturn(0);\n}",$1.ccode,$2.ccode,$3.ccode);  //翻译相应语句main等
-          fprintf(stderr, "body ok\n");
+          //fprintf(stderr, "body ok\n");
          }
          ;
 
@@ -141,7 +144,9 @@ identifier_list : identifier_list ',' ID  //规约成变量列表，total记录�
                 strcpy($$.id_name[k],$3.ccode);   //增加一个变量，即ID
               $$.ccode = (char *)malloc($1.len + $3.len + 2); //分配内存 +1为‘，’
               $$.len = sprintf($$.ccode,"%s,%s",$1.ccode,$3.ccode); //格式化代码写入$$，包含','
-                fprintf(stderr, "ID=%s\n", $3.ccode);
+          //      fprintf(stderr, "ID=%s\n", $3.ccode);
+            //    fprintf(stderr, "list=%s\n", $$.ccode);
+                
           }
         | ID
           {
@@ -150,7 +155,7 @@ identifier_list : identifier_list ',' ID  //规约成变量列表，total记录�
 
               $$.ccode = (char *)malloc($1.len + 1);//分配空间
               $$.len = sprintf($$.ccode,"%s",$1.ccode); //格式化代码写入$$
-                fprintf(stderr, "ID=%s\n", $1.ccode);
+              //  fprintf(stderr, "ID=%s\n", $1.ccode);
             }
 //           | DIGITS ID error ' '//若标示符声明有误
 //           {
@@ -161,7 +166,7 @@ identifier_list : identifier_list ',' ID  //规约成变量列表，total记录�
 //           }
         ;
 
-declarations : VAR declaration ';' //规约成所有声明的统一  ？
+declarations : VAR declaration ';' //规约成所有声明的统一
          {
                   $$.ccode = (char *)malloc($2.len + 2); //分配空间,1为‘;’
             $$.len = sprintf($$.ccode,"%s;",$2.ccode);  //格式化代码写入$$
@@ -198,7 +203,7 @@ declaration : declaration ';' identifier_list ':' type  //声明较多，将声�
               }
               else
               {
-                yyerror("变量重复定义，声明处");
+                yyerror("变量重复定义！声明处");
                 yyerrok;
               }
             }
@@ -211,8 +216,8 @@ declaration : declaration ';' identifier_list ':' type  //声明较多，将声�
             else             //根据类型，若是数组，将该声明和前面规约出来的声明串合并。
             {
                 //$$.len = sprintf($$.ccode,"%d",$5.length);  cout<<$5.length;
-                      $$.ccode = (char *)malloc($1.len + $3.len + $5.len + $$.len + 9);
-                $$.len = sprintf($$.ccode,"%s;\n%s %s[%d]",$1.ccode,$5.ccode,$3.ccode,$5.length+1);   //增加声明数组大小[%d]
+                      $$.ccode = (char *)malloc($1.len + $3.len + $5.len + $$.len + 20);
+                $$.len = sprintf($$.ccode,"%s;\n%s %s[%d]",$1.ccode,$5.ccode,$3.ccode,$5.length);   //增加声明数组大小[%d]
             }
         }
       | identifier_list ':' type       //单一声明
@@ -254,7 +259,7 @@ declaration : declaration ';' identifier_list ':' type  //声明较多，将声�
           else //根据类型，若是数组，将该声明和前面规约出来的声明串合并，增加数组大小的声明
           {
             $$.ccode = (char *)malloc($1.len + $3.len  + 10);
-            $$.len = sprintf($$.ccode,"%s %s[%d]",$3.ccode,$1.ccode,$3.length+1);  //增加声明数组大小[%d]
+            $$.len = sprintf($$.ccode,"%s %s[%d]",$3.ccode,$1.ccode,$3.length);  //增加声明数组大小[%d]
           }
         }
       ;
@@ -268,15 +273,24 @@ type    : standard_type   //规约成类型
         }
       | ARRAY '['DIGITS '.''.' DIGITS']' OF standard_type
         {
+            
             $$.isarray=1;
             $$.low=$3.num;
             $$.high=$6.num;
-            $$.length=$6.num-$3.num+1;
-          //  cout<<$6.num<<"    "<<$3.num;
+            
+            if ($$.low > $$.high)  // to correct
+            {
+                int temp = $$.low;
+                $$.low = $$.high;
+                $$.high = temp;
+            } 
+            $$.length=$$.high-$$.low+1;
+
             $$.Type=$9.Type;
 
             $$.ccode = (char *)malloc($9.len + 1);
             $$.len = sprintf($$.ccode,"%s",$9.ccode);
+            if ($3.num>$6.num) yyerror(" the index error.");
         }
       | RECORD declaration END
         {
@@ -361,7 +375,7 @@ subprogram_head : FUNCTION ID arguments ':' standard_type ';'//规约成子函�
             $$.ccode = (char *)malloc($2.len + $3.len  + 2);
                 $$.len = sprintf($$.ccode,"%s%s",$2.ccode,$3.ccode);
               yyerror("函数无返回值类型");
-              yyerrok;
+
           }
         | PROCEDURE ID arguments ';'//过程头部规约
           {
@@ -580,7 +594,7 @@ statement : variable ASSIGNOP expression  //赋值语句
           {
             $$.ccode = (char *)malloc($1.len + $3.len + 5);
             $$.len = sprintf($$.ccode,"%s = %s;",$1.ccode,$3.ccode);
-            yyerror("赋值号两边类型不符合，而且该类型不能进行强制转化！");
+            yyerror("赋值号两边类型不符合，而且该类型不能进行强制转化");
             yyerrok;
         }
       }
@@ -634,22 +648,29 @@ statement : variable ASSIGNOP expression  //赋值语句
            j=0;
 
           strcpy(n,$3.ccode);
+        //  fprintf(stderr, "n=%s\n", n);
            while(count<$3.len)
            {
           for(i=0;(count<$3.len) && ($3.ccode[count]!=',');i++,count++)
             identifier[i]=*($3.ccode+count);
           identifier[i]='\0';
+      //    fprintf(stderr, "identifier=%s\n", identifier);
           count++;
-          temp[j]=(char *)malloc(i+14);
+          temp[j]=(char *)malloc(i+15);
           length[j]=sprintf(temp[j],"cin>>%s;",identifier);
+  //        fprintf(stderr, "length=%d\n", length[j]);
           j++;
         }
 
 
         $$.ccode = (char *)malloc(5000);
         $$.len = sprintf($$.ccode,"%.*s",length[0],temp[0]);
-        for(;i<j;i++)
+    //    fprintf(stderr, "temp[0]=%s\n", temp[0]);
+        for(i=1;i<j;i++) {
+           //fprintf(stderr, "$$.ccode=%s\ntemp[%d]=%s\n", $$.ccode, i, temp[i]); 
            $$.len = sprintf($$.ccode,"%.*s\n%.*s",$$.len,$$.ccode,length[i],temp[i]);
+           }
+//           fprintf(stderr, "$$.ccode=%s\n", $$.ccode);
         }
 
       | WRITE '('expression_list')'
@@ -716,7 +737,7 @@ variable : ID   //规约成变量,根据变量类型，将其属性存入variabl
         {
             $$.ccode = (char *)malloc($1.len + 1);
               $$.len = sprintf($$.ccode,"%s",$1.ccode);
-              yyerror("变量未定义！");
+              yyerror("变量未定义");
               yyerrok;
           }
       }
@@ -727,10 +748,11 @@ variable : ID   //规约成变量,根据变量类型，将其属性存入variabl
       {
         if(ele1->type==ARRAY_T&&$3.Type==INT_T)
         {
+          int mylow = ele1->arr_fun.arr.first;
           $$.Type=ele1->arr_fun.arr.arr_type;
           $$.isfunction=0;
-          $$.ccode = (char *)malloc($1.len + $3.len + 10);
-            $$.len = sprintf($$.ccode,"%s[%s]",$1.ccode,$3.ccode);
+          $$.ccode = (char *)malloc($1.len + $3.len + 20);
+          $$.len = sprintf($$.ccode,"%s[%s-%d]",$1.ccode,$3.ccode,mylow);
         }
       }
 
@@ -738,7 +760,7 @@ variable : ID   //规约成变量,根据变量类型，将其属性存入variabl
         {
           $$.ccode = (char *)malloc($1.len + $3.len + 10);
           $$.len = sprintf($$.ccode,"%s[%s]",$1.ccode,$3.ccode);
-          yyerror("变量未定义！");
+          yyerror("变量未定义");
          yyerrok;
         }
        }
@@ -773,7 +795,7 @@ procedure_statement : ID             //过程声明，不含参数的过程
               {
                 $$.ccode = (char *)malloc($1.len + 1);
               $$.len = sprintf($$.ccode,"%s",$1.ccode);
-                yyerror("变量未定义！");
+                yyerror("变量未定义");
                 yyerrok;
               }
           }
@@ -795,7 +817,7 @@ procedure_statement : ID             //过程声明，不含参数的过程
                   {
                     $$.ccode = (char *)malloc($1.len + $3.len + 12);
                     $$.len = sprintf($$.ccode,"%s(%s)",$1.ccode,$3.ccode);
-                    yyerror("参数列表与定义时的不匹配!!!");
+                    yyerror("参数列表与定义时的不匹配");
                     yyerrok;
                   }
                 }
@@ -803,7 +825,7 @@ procedure_statement : ID             //过程声明，不含参数的过程
                 {
                   $$.ccode = (char *)malloc($1.len + $3.len + 12);
                   $$.len = sprintf($$.ccode,"%s(%s)",$1.ccode,$3.ccode);
-                  yyerror("参数列表与定义时的不匹配!!!!");
+                  yyerror("参数列表与定义时的不匹配");
                   yyerrok;
                 }
             }
@@ -811,7 +833,7 @@ procedure_statement : ID             //过程声明，不含参数的过程
             {
               $$.ccode = (char *)malloc($1.len + $3.len + 12);
               $$.len = sprintf($$.ccode,"%s(%s)",$1.ccode,$3.ccode);
-                yyerror("变量未定义！");
+                yyerror("变量未定义");
                 yyerrok;
               }
            }
@@ -971,7 +993,7 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
 
             $$.ccode = (char *)malloc($1.len + 1);
             $$.len = sprintf($$.ccode,"%s",$1.ccode);
-            yyerror("函数或数组调用语句不符合规范！！！");
+            yyerror("函数或数组调用语句不符合规范");
             yyerrok;
           }
       }
@@ -979,7 +1001,7 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
         {
           $$.ccode = (char *)malloc($1.len + 1);
           $$.len = sprintf($$.ccode,"%s",$1.ccode);
-            yyerror("变量未定义！");
+            yyerror("变量未定义");
             yyerrok;
         }
 
@@ -1003,7 +1025,7 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
             {
               $$.ccode = (char *)malloc($1.len + $3.len + 12);
               $$.len = sprintf($$.ccode,"%s(%s)",$1.ccode,$3.ccode);
-              yyerror("参数列表与定义时的不匹配!!!!");
+              yyerror("参数列表与定义时的不匹配");
               yyerrok;
             }
           }
@@ -1019,7 +1041,7 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
         {
         $$.ccode = (char *)malloc($1.len + $3.len + 12);
         $$.len = sprintf($$.ccode,"%s(%s)",$1.ccode,$3.ccode);
-          yyerror("变量未定义！");
+          yyerror("变量未定义");
           yyerrok;
         }
     }
@@ -1030,17 +1052,18 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
       {
           if(ele1->type==ARRAY_T && $3.Type==INT_T)
             {
+                int mylow = ele1->arr_fun.arr.first;
                 $$.Type=ele1->arr_fun.arr.arr_type;
                 $$.isfunction=0;
 
-                $$.ccode = (char *)malloc($1.len + $3.len + 10);
-              $$.len = sprintf($$.ccode,"%s[%s]",$1.ccode,$3.ccode);
+                $$.ccode = (char *)malloc($1.len + $3.len + 20);
+                $$.len = sprintf($$.ccode,"%s[%s-%d]",$1.ccode,$3.ccode,mylow);
             }
             else
             {
               $$.ccode = (char *)malloc($1.len + $3.len + 10);
               $$.len = sprintf($$.ccode,"%s[%s]",$1.ccode,$3.ccode);
-              yyerror("ID不是数组名或下标不合法.");
+              yyerror("ID不是数组名或下标不合法");
               yyerrok;
             }
         }
@@ -1048,7 +1071,7 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
         {
           $$.ccode = (char *)malloc($1.len + $3.len + 10);
           $$.len = sprintf($$.ccode,"%s[%s]",$1.ccode,$3.ccode);
-          yyerror("变量未定义！");
+          yyerror("变量未定义");
           yyerrok;
         }
        }
@@ -1095,7 +1118,6 @@ factor : ID // 当id是一个factor时，规约上去是一个表达式，所以
 
 int main(void)
 {
-
     table.m_size = 1024;
     table.m_num_of_pro =0;
 
@@ -1104,9 +1126,9 @@ int main(void)
     return 0;
 }
 
-void yyerror(const char *s)
+void yyerror(const char* s)
 {
-    fprintf(stderr, " 错误出现在源文件%d行：%s\n", yylloc.first_line,s);
+    fprintf(stderr, "-_-！错误出现在源文件%d行：%s\n", yylineno, s);   
 }
 
 //判断子表中，即该函数或过程中的作用域，该元素是否已经定义，未定义返回0，已定义返回-1
