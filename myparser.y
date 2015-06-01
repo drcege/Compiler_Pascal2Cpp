@@ -416,6 +416,118 @@ arguments : '('parameter_list')'//参数列表
       }
       ;
 
+parameter_list : parameter_list ';' VAR identifier_list ':' type  //形成参数列表(参数列表;id列表:类型)->(参数列表,类型 id)
+         {
+            $$.total=$1.total+$4.total;//统计参数个数
+
+          for(k=0;k<$1.total;k++)
+                $$.para_type[k]=$1.para_type[k];
+
+            for(k=0;k<$4.total;k++)
+            {
+                if(check($4.id_name[k])==0)//查看参数是否在对应的子表中重复定义，但此时子程序的函数头还为规约出来，所以
+                {             //必须建立一个临时子表，来存放对应参数符号，等函数头规约出来，再压入栈中
+
+                  $$.para_type[k+$1.total]=$6.Type;
+                  ele=(Element*)malloc(sizeof(Element));
+                  strcpy(ele->name,$4.id_name[k]);
+
+                  if($6.isarray==0)
+                  {
+                    ele->type=$6.Type;
+                  }
+                  else
+                  {
+                    ele->type=ARRAY_T;
+                    (ele->arr_fun).arr.first=$6.low;
+                    (ele->arr_fun).arr.last=$6.high;
+                    (ele->arr_fun).arr.arr_type=$6.Type;
+                  }
+                  SymPush(temp1, ele);
+                }
+                else
+                {
+                  yyerror("变量重复定义！形参声明处");
+                  yyerrok;
+                }
+            }
+            if($6.isarray == 0)  //对于数组翻译方法略不同
+          {
+                      $$.ccode = (char *)malloc($1.len + $4.len + $6.len + 4);
+                  $$.len = sprintf($$.ccode,"%s,%s& %s",$1.ccode,$6.ccode,$4.ccode);
+              }
+              else
+              {
+                $$.ccode = (char *)malloc($1.len + $4.len + $6.len + sizeof($6.length) + 6);
+                $$.len = sprintf($$.ccode,"%s,%s& %s[%d]",$1.ccode,$6.ccode,$4.ccode,$6.length);
+              }
+         }
+               | VAR identifier_list ':' type          //最后一个参数
+                 {
+                  temp1 =(SymbalList*)malloc(sizeof(SymbalList));
+                  temp1->m_size = 1024;
+                  temp1->m_num_of_pro =0;
+                  $$.total=$2.total;
+                  for(k=0;k<$2.total;k++)
+                {
+              $$.para_type[k]=$4.Type;
+              if(check($2.id_name[k])==0)
+              {
+                ele=(Element*)malloc(sizeof(Element));
+                strcpy(ele->name,$2.id_name[k]);
+
+                if($4.isarray==0)
+                {
+                  ele->type=$4.Type;
+                }
+                else
+                {
+                  ele->type=ARRAY_T;
+                  (ele->arr_fun).arr.first=$4.low;
+                  (ele->arr_fun).arr.last=$4.high;
+                  (ele->arr_fun).arr.arr_type=$4.Type;
+                }
+                SymPush(temp1, ele);
+
+              }
+              else
+              {
+                yyerror("变量重复定义！单种类型形参处");
+                yyerrok;
+              }
+            }
+
+
+            if($4.isarray == 0)
+            {
+                $$.ccode = (char *)malloc($2.len + $4.len + 40);
+            	$$.len = sprintf($$.ccode,"%s",$4.ccode);
+            	strcat($$.ccode, "& ");
+            	$$.len += 2;
+            	int i = 0;
+            	for(;i<$2.len;i++){
+            		if($2.ccode[i]!=','){
+            			strncat($$.ccode, &$2.ccode[i],1);
+            			$$.len++;
+            		}
+            		else{
+            			strcat($$.ccode,",");
+            			strcat($$.ccode,$4.ccode);
+            			strcat($$.ccode, "&");
+            			strcat($$.ccode," ");
+            			$$.len+=($4.len+3);
+            		}
+            	}
+            }
+            else
+            {
+                $$.len = sprintf($$.ccode,"%d",$4.length);
+                $$.ccode = (char *)malloc($2.len + $4.len + $$.len + 4);
+                $$.len = sprintf($$.ccode,"%s& %s[%d]",$4.ccode,$2.ccode,$4.length);
+            }
+         }
+        ;
+               
 parameter_list : parameter_list ';' identifier_list ':' type  //形成参数列表(参数列表;id列表:类型)->(参数列表,类型 id)
          {
             $$.total=$1.total+$3.total;//统计参数个数
@@ -453,27 +565,25 @@ parameter_list : parameter_list ';' identifier_list ':' type  //形成参数列�
             }
 
             if($5.isarray == 0)  //对于数组翻译方法略不同
-          {
+            {
                       $$.ccode = (char *)malloc($1.len + $3.len + $5.len + 3);
-                $$.len = sprintf($$.ccode,"%s,%s %s",$1.ccode,$5.ccode,$3.ccode);
+                     $$.len = sprintf($$.ccode,"%s,%s %s",$1.ccode,$5.ccode,$3.ccode);
               }
               else
               {
-                $$.len = sprintf($$.ccode,"%d",$5.length);
-                      $$.ccode = (char *)malloc($1.len + $3.len + $5.len + $$.len + 5);
-                $$.len = sprintf($$.ccode,"%s,%s %s[%d]",$1.ccode,$5.ccode,$3.ccode,$5.length);
+                      $$.ccode = (char *)malloc($1.len + $3.len + $5.len + sizeof($5.length) + 5);
+                     $$.len = sprintf($$.ccode,"%s,%s %s[%d]",$1.ccode,$5.ccode,$3.ccode,$5.length);
               }
 
          }
-
                | identifier_list ':' type          //最后一个参数
-                 {
+                 { 
                   temp1 =(SymbalList*)malloc(sizeof(SymbalList));
                   temp1->m_size = 1024;
                   temp1->m_num_of_pro =0;
                   $$.total=$1.total;
                   for(k=0;k<$1.total;k++)
-            {
+                {
               $$.para_type[k]=$3.Type;
               if(check($1.id_name[k])==0)
               {
@@ -509,23 +619,24 @@ parameter_list : parameter_list ';' identifier_list ':' type  //形成参数列�
             	int i = 0;
             	for(;i<$1.len;i++){
             		if($1.ccode[i]!=','){
-            			strncat($$.ccode,&$1.ccode[i],1);
+            			strncat($$.ccode, &$1.ccode[i],1);
             			$$.len++;
             		}
             		else{
             			strcat($$.ccode,",");
             			strcat($$.ccode,$3.ccode);
             			strcat($$.ccode," ");
-            			$$.len+=($3.len+2);
+            			$$.len+=($3.len+3);
             		}
             	}
             }
             else
             {
                 $$.len = sprintf($$.ccode,"%d",$3.length);
-                      $$.ccode = (char *)malloc($1.len + $3.len + $$.len + 4);
+                $$.ccode = (char *)malloc($1.len + $3.len + $$.len + 4);
                 $$.len = sprintf($$.ccode,"%s %s[%d]",$3.ccode,$1.ccode,$3.length);
             }
+           // fprintf(stderr, "ccode=%s\n", $$.ccode);
          }
                ;
 
