@@ -17,6 +17,9 @@ unsigned SymHash(SymbalList *sym, Element *s)
 int SymIsExist(SymbalList *sym, Element *key)
 {
     int pos;
+    if(sym == NULL)
+        return -1;
+    
     assert(sym->m_num_of_pro <= 0.5 * sym->m_size);  //元素的个数小于表长的一半
     pos = SymHash(sym, key);
     while (sym->m_name_list[pos] != NULL)

@@ -12,9 +12,9 @@ char identifier[20], ex[100], *temp[20];
 int i, j, count, length[20];
 char a[15];
 char t;
-Element *ele;  //符号表指针
-Element *ele1;
-SymbalList *temp1;
+Element *ele = NULL;  //符号表指针
+Element *ele1 = NULL;
+SymbalList *temp1 = NULL;
 SymbalList table;
 int ptrStack = 0;
 SymbalList *s_stack[1024];  //多个符号表组成的栈结构
@@ -224,7 +224,8 @@ declaration : declaration ';' identifier_list ':' type  //声明较多，将声�
         {
             for(k=0;k<$1.total;k++)   //对identifier_list进行重复检测，无重复则压入符号表
             {
-              if(find($1.id_name[k])==NULL) //为NULL，说明未定义
+              //if(find($1.id_name[k])==NULL) //为NULL，说明未定义
+              if(check($1.id_name[k])==0)
               {
                 ele=(Element*)malloc(sizeof(Element));//符号表指针分配一个表项
                 strcpy(ele->name,$1.id_name[k]);//赋名称
@@ -347,6 +348,7 @@ subprogram_declaration : subprogram_head declarations compound_statement //子�
                 temp1 = s_stack[ptrStack-1];
                  --ptrStack;
                  free(temp1);
+                 temp1 = NULL;
              }
              ;
 
@@ -1249,6 +1251,7 @@ int check(char *s)
     strcpy(e->name, s);
     if (SymIsExist(temp1, e) != -1) //已定义该元素
     {
+        fprintf(stderr, "--1\n");
         free(e);
         return -1;
     }
@@ -1264,6 +1267,7 @@ Element *find(char *s)
     strcpy(e->name, s);
     for (j = ptrStack-1; j >= 0; j--)
     {
+
         i = SymIsExist(s_stack[j], e);
         if (i != -1)
         {
