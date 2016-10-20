@@ -8,5 +8,5 @@ Compiler_Pascal2Cpp
 
 Usage
 -------
-1. Compile:  make  
-2. Run:  ./my < test/testgcd.txt > out.cpp  
+1. make  
+2. ./my < test/testgcd.txt > out.cpp  
