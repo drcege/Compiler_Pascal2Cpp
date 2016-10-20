@@ -1,4 +1,12 @@
-# Compiler_Pascal2Cpp  
-Linux平台  
-编译：make  
-运行：./my < test/testgcd.txt > out.cpp  
+Compiler_Pascal2Cpp  
+======================
+
+* BUPT
+* Compilation Principle
+* A Simple Compiler (pascal -> c++)
+* Linux platform
+
+Usage
+-------
+1. Compile:  make  
+2. Run:  ./my < test/testgcd.txt > out.cpp  
